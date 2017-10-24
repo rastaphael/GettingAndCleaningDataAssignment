@@ -1,0 +1,110 @@
+run_analysis
+============
+Last updated 2017-10-24 09:37:42 using R version 3.3.0 (2016-05-03).
+
+library(dplyr)
+
+1. Merges the training and the test sets to create one data set.
+----------------------------------------------------------------
+
+Read features description
+
+```r
+features <- read.table("features.txt")[,"V2"]
+```
+
+## Read training and test Set
+
+```r
+rTrain <- read.table("train/X_train.txt", col.names=features)
+rTest <- read.table("test/X_test.txt", col.names=features)
+```
+## Merge them
+
+```r
+mSet <- rbind(rTrain, rTest)
+```
+
+2. Extracts only the measurements on the mean and standard deviation for each measurement. 
+
+```r
+library(plyr)
+library(dplyr)
+msfIndices <- sort( union( grep ("mean\\(\\)",features)  , grep ("std\\(\\)", features)))
+msFeatures <- features[msfIndices]
+msSet <- select(mSet, msFeatures)
+```
+
+3. Uses descriptive activity names to name the activities in the data set
+-------------------------------------------------------------------------
+
+
+```r
+activities <- read.table("activity_labels.txt")[,"V2"]
+```
+
+Read activity files
+
+
+```r
+aTrain <- read.table("./train/y_train.txt")
+aTest <- read.table("./test/y_test.txt")
+aSet <- rbind(aTrain, aTest)
+## set activity to the data set according to the y files
+msSet$activity <- activities[aSet$V1]
+```
+
+4. Appropriately labels the data set with descriptive variable names. 
+---------------------------------------------------------------------
+
+Remove parenthesis
+
+```r
+names(msSet) <- gsub("\\(", "", names(msSet))
+names(msSet) <- gsub("\\)", "", names(msSet))
+```
+
+Make some names more comprehensible
+
+
+```r
+names(msSet) <- gsub("^t", "Time", names(msSet))
+names(msSet) <- gsub("^f", "Frequency", names(msSet))
+names(msSet) <- gsub("Acc", "Acceleration", names(msSet))
+names(msSet) <- gsub("mean", "Mean", names(msSet))
+names(msSet) <- gsub("std", "Standard", names(msSet))
+names(msSet) <- gsub("Mag", "Magnitude", names(msSet))
+```
+
+5. From the data set in step 4, creates a second, independent tidy data set with the average of each variable for each activity and each subject.
+-------------------------------------------------------------------------------------------------------------------------------------------------
+
+Get subjects
+
+
+```r
+subjectsTrain <-  read.table("train/subject_train.txt")
+subjectsTest <-  read.table("test/subject_test.txt")
+subjects <- rbind( subjectsTrain, subjectsTest)
+msSet$subject <- subjects$V1
+```
+
+Compute mean by subject+sctivity
+
+```r
+msSet2<-aggregate(. ~subject + activity, msSet, mean)
+msSet2<-msSet2[order(msSet2$subject,msSet2$activity),]
+## write out table in a file
+write.table(msSet2, file = "tidydata.txt",row.name=FALSE)
+```
+
+Update provided codebook
+
+```r
+library(knitr)
+knit("makeCodebook.Rmd", output="codebook.md", encoding="ISO8859-1", quiet=TRUE)
+```
+
+```
+## [1] "codebook.md"
+```
